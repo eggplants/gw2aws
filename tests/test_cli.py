@@ -49,6 +49,7 @@ def test_login_headless_defaults_true(monkeypatch):
     captured = {}
     cfg = config.ProfileConfig(url="https://x", email="a@b.com", password="pw")
     monkeypatch.setattr(config, "load", lambda _profile: cfg)
+    monkeypatch.setattr(cli, "is_chromium_installed", lambda: True)
     monkeypatch.setattr(
         cli,
         "fetch_saml_response",

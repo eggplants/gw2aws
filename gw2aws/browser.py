@@ -54,6 +54,12 @@ class LoginError(RuntimeError):
     pass
 
 
+def is_chromium_installed() -> bool:
+    """Whether the Chromium build Playwright needs is already downloaded locally."""
+    with sync_playwright() as pw:
+        return Path(pw.chromium.executable_path).exists()
+
+
 def fetch_saml_response(
     config: ProfileConfig,
     password: str,

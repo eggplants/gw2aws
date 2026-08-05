@@ -7,7 +7,7 @@ import getpass
 import sys
 
 from gw2aws import aws, config
-from gw2aws.browser import LoginError, TotpProvider, fetch_saml_response
+from gw2aws.browser import LoginError, TotpProvider, fetch_saml_response, is_chromium_installed
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -102,10 +102,11 @@ def cmd_login(args: argparse.Namespace) -> int:
     )
 
     print("Opening browser for Google Workspace login ...", file=sys.stderr)
-    print(
-        "(The first run may take a while to download the headless browser and driver.)",
-        file=sys.stderr,
-    )
+    if not is_chromium_installed():
+        print(
+            "(The first run may take a while to download the headless browser and driver.)",
+            file=sys.stderr,
+        )
     saml_assertion = fetch_saml_response(
         cfg,
         password=password,
