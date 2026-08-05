@@ -48,6 +48,14 @@ def _prompt(text: str, default: str = "") -> str:
     return value or default
 
 
+def _prompt_bool(text: str, default: bool) -> bool:
+    suffix = "Y/n" if default else "y/N"
+    value = input(f"{text} [{suffix}]: ").strip().lower()
+    if not value:
+        return default
+    return value in ("y", "yes")
+
+
 def cmd_configure(args: argparse.Namespace) -> int:
     try:
         existing = config.load(args.profile)
@@ -73,6 +81,9 @@ def cmd_configure(args: argparse.Namespace) -> int:
         print("Invalid duration; using 3600.")
         session_duration = 3600
 
+    print("\nSaving the Google session cookie locally lets future logins skip the login form.")
+    save_session_cookie = _prompt_bool("Save session cookie locally?", existing.save_session_cookie)
+
     cfg = config.ProfileConfig(
         url=url,
         email=email,
@@ -81,8 +92,14 @@ def cmd_configure(args: argparse.Namespace) -> int:
         region=region,
         role_arn=role_arn,
         session_duration=session_duration,
+        save_session_cookie=save_session_cookie,
     )
     path = config.save(args.profile, cfg)
+
+    storage_state_path = config.storage_state_path(args.profile)
+    if not save_session_cookie and storage_state_path.exists():
+        storage_state_path.unlink()
+
     print(f"\nSaved: {path}")
     return 0
 
@@ -98,7 +115,7 @@ def cmd_login(args: argparse.Namespace) -> int:
 
     totp = TotpProvider(
         totp_url=cfg.totp_url,
-        prompt=lambda: input("Google Authenticator code: ").strip(),
+        prompt=lambda: input("TOTP code: ").strip(),
     )
 
     print("Opening browser for Google Workspace login ...", file=sys.stderr)
@@ -112,7 +129,7 @@ def cmd_login(args: argparse.Namespace) -> int:
         password=password,
         totp_provider=totp,
         headless=args.headless,
-        storage_state_path=config.storage_state_path(args.profile),
+        storage_state_path=config.storage_state_path(args.profile) if cfg.save_session_cookie else None,
     )
 
     roles = aws.extract_roles(saml_assertion)

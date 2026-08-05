@@ -29,6 +29,9 @@ class ProfileConfig:
     role_arn: str = ""  # if set, this role is auto-selected without prompting
     session_duration: int = 3600  # STS credential lifetime in seconds
 
+    # Browser session persistence
+    save_session_cookie: bool = True  # persist Google session cookies locally to skip login on reuse
+
     # Fields not persisted for the login itself but useful defaults
     extra: dict = field(default_factory=dict)
 
