@@ -25,6 +25,7 @@
             <ul>
   <li><a href="#gw2aws">gw2aws</a>
   <ul>
+    <li><a href="#install">Install</a></li>
     <li><a href="#usage">Usage</a></li>
     <li><a href="#references">References</a></li>
   </ul></li>
@@ -63,13 +64,22 @@ gw2aws    </h1>
 
 <p>SAML login to AWS via Google Workspace using Playwright.</p>
 
+<h2 id="install">Install</h2>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>pipx<span class="w"> </span>install<span class="w"> </span>gw2aws
+<span class="c1"># or</span>
+pip<span class="w"> </span>install<span class="w"> </span>gw2aws
+</code></pre>
+</div>
+
 <h2 id="usage">Usage</h2>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>gw2aws<span class="w"> </span>configure<span class="w"> </span>--profile<span class="w"> </span>myprofile
+<pre><span></span><code>gw2aws<span class="w"> </span>configure<span class="w"> </span>--profile<span class="w"> </span>myprofile
 
-uv<span class="w"> </span>run<span class="w"> </span>gw2aws<span class="w"> </span>login<span class="w"> </span>--profile<span class="w"> </span>myprofile
-uv<span class="w"> </span>run<span class="w"> </span>gw2aws<span class="w"> </span>login<span class="w"> </span>--profile<span class="w"> </span>myprofile<span class="w"> </span>--no-headless
+gw2aws<span class="w"> </span>login<span class="w"> </span>--profile<span class="w"> </span>myprofile
+gw2aws<span class="w"> </span>login<span class="w"> </span>--profile<span class="w"> </span>myprofile<span class="w"> </span>--no-headless
 
 aws<span class="w"> </span>--profile<span class="w"> </span>myprofile<span class="w"> </span>sts<span class="w"> </span>get-caller-identity
 </code></pre>
