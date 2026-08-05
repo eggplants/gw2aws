@@ -12,13 +12,21 @@
 
 SAML login to AWS via Google Workspace using Playwright.
 
+## Install
+
+```bash
+pipx install gw2aws
+# or
+pip install gw2aws
+```
+
 ## Usage
 
 ```bash
-uv run gw2aws configure --profile myprofile
+gw2aws configure --profile myprofile
 
-uv run gw2aws login --profile myprofile
-uv run gw2aws login --profile myprofile --no-headless
+gw2aws login --profile myprofile
+gw2aws login --profile myprofile --no-headless
 
 aws --profile myprofile sts get-caller-identity
 ```
