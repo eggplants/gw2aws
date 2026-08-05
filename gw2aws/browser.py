@@ -9,6 +9,7 @@ Reference: https://aws.amazon.com/blogs/security/how-to-implement-a-general-solu
 
 from __future__ import annotations
 
+import json
 import random
 import re
 import urllib.parse
@@ -27,6 +28,7 @@ SIGNIN_RE = re.compile(r"https://((.*\.)?signin\.(aws\.amazon\.com|amazonaws-us-
 
 DEFAULT_TIMEOUT_MS = 300_000  # 5 min overall wait for the SAMLResponse
 STEP_TIMEOUT_MS = 30_000  # per-selector wait
+POLL_INTERVAL_MS = 200  # step size when polling a selector against STEP_TIMEOUT_MS
 
 # Human-like randomised waits (milliseconds): applied between keystrokes and
 # before button actions to avoid an obviously robotic input cadence.
@@ -61,11 +63,10 @@ def fetch_saml_response(
 ) -> str:
     """Run the browser login and return the base64 SAMLResponse string.
 
-    If `storage_state_path` points to a previously saved Playwright storage
-    state (cookies + localStorage), it is loaded into the new context so an
-    already-authenticated Google session can skip straight to the SAML
-    redirect. The (possibly refreshed) state is saved back afterwards so the
-    next run can reuse it too.
+    If `storage_state_path` points to previously saved cookies, they are
+    loaded into the new context so an already-authenticated Google session
+    can skip straight to the SAML redirect. The (possibly refreshed) cookies
+    are saved back afterwards so the next run can reuse them too.
     """
     captured: dict[str, str] = {}
 
@@ -94,8 +95,13 @@ def fetch_saml_response(
             _wait_for_capture(page, captured)
         finally:
             if storage_state_path:
+                # Cookies only (not the full storage_state()): capturing
+                # localStorage would make Playwright open a hidden page per
+                # origin visited during the Google login to read it back,
+                # adding several seconds to every run. Google's session is
+                # carried by cookies, which is all reuse needs.
                 storage_state_path.parent.mkdir(parents=True, exist_ok=True)
-                context.storage_state(path=str(storage_state_path))
+                storage_state_path.write_text(json.dumps({"cookies": context.cookies()}))
                 # May contain a live Google session cookie -- keep it private.
                 storage_state_path.chmod(0o600)
             context.close()
@@ -133,33 +139,50 @@ def _google_login(
     # redirect without ever rendering the email/password/2FA forms.
     if "saml" in captured:
         return
-    _fill_email(page, config.email)
+    _fill_email(page, config.email, captured)
     if "saml" in captured:
         return
-    _fill_password(page, password)
+    _fill_password(page, password, captured)
     if "saml" in captured:
         return
     _handle_totp(page, totp_provider, captured)
 
 
-def _fill_email(page: Page, email: str) -> None:
+def _wait_visible_or_captured(page: Page, locator, captured: dict[str, str], timeout_ms: int) -> bool:
+    """Poll for `locator` to become visible, bailing early if `captured` fills in.
+
+    A plain `locator.wait_for(state="visible", timeout=...)` blocks for the
+    full timeout with no way to notice that a reused session already
+    produced the SAMLResponse in the background (the field it's waiting for
+    will simply never appear). Polling in short steps lets that case return
+    almost immediately instead of burning the whole timeout.
+    """
+    waited = 0
+    while waited < timeout_ms:
+        if "saml" in captured:
+            return False
+        if _is_visible(locator):
+            return True
+        page.wait_for_timeout(POLL_INTERVAL_MS)
+        waited += POLL_INTERVAL_MS
+    return False
+
+
+def _fill_email(page: Page, email: str, captured: dict[str, str]) -> None:
     # Google's email field is a text input (name="identifier"/id="identifierId"),
     # not type="email".
     email_input = page.locator("input#identifierId, input[name='identifier'], input[type='email']")
-    try:
-        email_input.first.wait_for(state="visible", timeout=STEP_TIMEOUT_MS)
-    except PWTimeoutError:
-        # Email may already be chosen (login_hint / account chooser skipped).
+    if not _wait_visible_or_captured(page, email_input, captured, STEP_TIMEOUT_MS):
+        # Email may already be chosen (login_hint / account chooser skipped),
+        # or the SAMLResponse was already captured (reused session).
         return
     _human_type(page, email_input, email)
     _click_next(page, "#identifierNext")
 
 
-def _fill_password(page: Page, password: str) -> None:
+def _fill_password(page: Page, password: str, captured: dict[str, str]) -> None:
     password_input = page.locator("input[type='password']")
-    try:
-        password_input.first.wait_for(state="visible", timeout=STEP_TIMEOUT_MS)
-    except PWTimeoutError:
+    if not _wait_visible_or_captured(page, password_input, captured, STEP_TIMEOUT_MS):
         # Password may already be satisfied by a reused session (storage state).
         return
     _human_type(page, password_input, password)

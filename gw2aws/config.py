@@ -49,7 +49,7 @@ def profile_path(profile: str) -> Path:
 
 
 def storage_state_path(profile: str) -> Path:
-    """Path to the persisted Playwright storage state (cookies + localStorage).
+    """Path to the persisted browser session cookies (Playwright storage_state format).
 
     Reusing this across runs lets Google recognise an already-authenticated
     browser session and skip the login form, mirroring saml2aws's browser
