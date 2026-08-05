@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-`gw2aws` is a CLI that logs into AWS via a Google Workspace SAML IdP using a real browser (Playwright), then exchanges the captured SAML assertion for temporary STS credentials. It reimplements the **browser-provider approach** of [saml2aws](https://github.com/Versent/saml2aws) (a local copy is at `saml2aws/` for reference) — *not* its HTTP-scraping `googleapps` provider.
+`gw2aws` is a CLI that logs into AWS via a Google Workspace SAML IdP using a real browser (Playwright), then exchanges the captured SAML assertion for temporary STS credentials. It reimplements the **browser-provider approach** of [saml2aws](https://github.com/Versent/saml2aws).
 
 ## Commands
 
