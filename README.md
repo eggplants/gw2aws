@@ -12,6 +12,8 @@
 
 SAML login to AWS via Google Workspace using Playwright.
 
+Based on the behavior of the [`saml2aws`](https://github.com/Versent/saml2aws) Browser provider, `gw2aws` enables automated authentication for Google Workspace SSO.
+
 ## Install
 
 ```bash
