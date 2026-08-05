@@ -76,6 +76,9 @@
                     <a class="function" href="#profile_path">profile_path</a>
             </li>
             <li>
+                    <a class="function" href="#storage_state_path">storage_state_path</a>
+            </li>
+            <li>
                     <a class="function" href="#load">load</a>
             </li>
             <li>
@@ -154,25 +157,35 @@
 </span><span id="L-48"><a href="#L-48"><span class="linenos">48</span></a>    <span class="k">return</span> <span class="n">CONFIG_DIR</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">.json&quot;</span>
 </span><span id="L-49"><a href="#L-49"><span class="linenos">49</span></a>
 </span><span id="L-50"><a href="#L-50"><span class="linenos">50</span></a>
-</span><span id="L-51"><a href="#L-51"><span class="linenos">51</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProfileConfig</span><span class="p">:</span>
-</span><span id="L-52"><a href="#L-52"><span class="linenos">52</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">profile_path</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
-</span><span id="L-53"><a href="#L-53"><span class="linenos">53</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-</span><span id="L-54"><a href="#L-54"><span class="linenos">54</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-</span><span id="L-55"><a href="#L-55"><span class="linenos">55</span></a>            <span class="sa">f</span><span class="s2">&quot;No configuration for profile &#39;</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">&#39;. Run `gw2aws configure --profile </span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">` first.&quot;</span>
-</span><span id="L-56"><a href="#L-56"><span class="linenos">56</span></a>        <span class="p">)</span>
-</span><span id="L-57"><a href="#L-57"><span class="linenos">57</span></a>    <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
-</span><span id="L-58"><a href="#L-58"><span class="linenos">58</span></a>        <span class="k">return</span> <span class="n">ProfileConfig</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fp</span><span class="p">))</span>
+</span><span id="L-51"><a href="#L-51"><span class="linenos">51</span></a><span class="k">def</span><span class="w"> </span><span class="nf">storage_state_path</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+</span><span id="L-52"><a href="#L-52"><span class="linenos">52</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Path to the persisted Playwright storage state (cookies + localStorage).</span>
+</span><span id="L-53"><a href="#L-53"><span class="linenos">53</span></a>
+</span><span id="L-54"><a href="#L-54"><span class="linenos">54</span></a><span class="sd">    Reusing this across runs lets Google recognise an already-authenticated</span>
+</span><span id="L-55"><a href="#L-55"><span class="linenos">55</span></a><span class="sd">    browser session and skip the login form, mirroring saml2aws&#39;s browser</span>
+</span><span id="L-56"><a href="#L-56"><span class="linenos">56</span></a><span class="sd">    provider session-reuse behaviour (see CLAUDE.md).</span>
+</span><span id="L-57"><a href="#L-57"><span class="linenos">57</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="L-58"><a href="#L-58"><span class="linenos">58</span></a>    <span class="k">return</span> <span class="n">CONFIG_DIR</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">.storage_state.json&quot;</span>
 </span><span id="L-59"><a href="#L-59"><span class="linenos">59</span></a>
 </span><span id="L-60"><a href="#L-60"><span class="linenos">60</span></a>
-</span><span id="L-61"><a href="#L-61"><span class="linenos">61</span></a><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">ProfileConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-</span><span id="L-62"><a href="#L-62"><span class="linenos">62</span></a>    <span class="n">CONFIG_DIR</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="L-63"><a href="#L-63"><span class="linenos">63</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">profile_path</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
-</span><span id="L-64"><a href="#L-64"><span class="linenos">64</span></a>    <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
-</span><span id="L-65"><a href="#L-65"><span class="linenos">65</span></a>        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span> <span class="n">fp</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</span><span id="L-66"><a href="#L-66"><span class="linenos">66</span></a>        <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="L-67"><a href="#L-67"><span class="linenos">67</span></a>    <span class="c1"># Config may contain a password / TOTP secret -- keep it private.</span>
-</span><span id="L-68"><a href="#L-68"><span class="linenos">68</span></a>    <span class="n">path</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="mo">0o600</span><span class="p">)</span>
-</span><span id="L-69"><a href="#L-69"><span class="linenos">69</span></a>    <span class="k">return</span> <span class="n">path</span>
+</span><span id="L-61"><a href="#L-61"><span class="linenos">61</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProfileConfig</span><span class="p">:</span>
+</span><span id="L-62"><a href="#L-62"><span class="linenos">62</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">profile_path</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+</span><span id="L-63"><a href="#L-63"><span class="linenos">63</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="L-64"><a href="#L-64"><span class="linenos">64</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+</span><span id="L-65"><a href="#L-65"><span class="linenos">65</span></a>            <span class="sa">f</span><span class="s2">&quot;No configuration for profile &#39;</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">&#39;. Run `gw2aws configure --profile </span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">` first.&quot;</span>
+</span><span id="L-66"><a href="#L-66"><span class="linenos">66</span></a>        <span class="p">)</span>
+</span><span id="L-67"><a href="#L-67"><span class="linenos">67</span></a>    <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+</span><span id="L-68"><a href="#L-68"><span class="linenos">68</span></a>        <span class="k">return</span> <span class="n">ProfileConfig</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fp</span><span class="p">))</span>
+</span><span id="L-69"><a href="#L-69"><span class="linenos">69</span></a>
+</span><span id="L-70"><a href="#L-70"><span class="linenos">70</span></a>
+</span><span id="L-71"><a href="#L-71"><span class="linenos">71</span></a><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">ProfileConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+</span><span id="L-72"><a href="#L-72"><span class="linenos">72</span></a>    <span class="n">CONFIG_DIR</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="L-73"><a href="#L-73"><span class="linenos">73</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">profile_path</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+</span><span id="L-74"><a href="#L-74"><span class="linenos">74</span></a>    <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+</span><span id="L-75"><a href="#L-75"><span class="linenos">75</span></a>        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span> <span class="n">fp</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span id="L-76"><a href="#L-76"><span class="linenos">76</span></a>        <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="L-77"><a href="#L-77"><span class="linenos">77</span></a>    <span class="c1"># Config may contain a password / TOTP secret -- keep it private.</span>
+</span><span id="L-78"><a href="#L-78"><span class="linenos">78</span></a>    <span class="n">path</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="mo">0o600</span><span class="p">)</span>
+</span><span id="L-79"><a href="#L-79"><span class="linenos">79</span></a>    <span class="k">return</span> <span class="n">path</span>
 </span></pre></div>
 
 
@@ -409,6 +422,37 @@
     
 
                 </section>
+                <section id="storage_state_path">
+                            <input id="storage_state_path-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">storage_state_path</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span>:</span></span>
+
+                <label class="view-source-button" for="storage_state_path-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#storage_state_path"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="storage_state_path-52"><a href="#storage_state_path-52"><span class="linenos">52</span></a><span class="k">def</span><span class="w"> </span><span class="nf">storage_state_path</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+</span><span id="storage_state_path-53"><a href="#storage_state_path-53"><span class="linenos">53</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Path to the persisted Playwright storage state (cookies + localStorage).</span>
+</span><span id="storage_state_path-54"><a href="#storage_state_path-54"><span class="linenos">54</span></a>
+</span><span id="storage_state_path-55"><a href="#storage_state_path-55"><span class="linenos">55</span></a><span class="sd">    Reusing this across runs lets Google recognise an already-authenticated</span>
+</span><span id="storage_state_path-56"><a href="#storage_state_path-56"><span class="linenos">56</span></a><span class="sd">    browser session and skip the login form, mirroring saml2aws&#39;s browser</span>
+</span><span id="storage_state_path-57"><a href="#storage_state_path-57"><span class="linenos">57</span></a><span class="sd">    provider session-reuse behaviour (see CLAUDE.md).</span>
+</span><span id="storage_state_path-58"><a href="#storage_state_path-58"><span class="linenos">58</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="storage_state_path-59"><a href="#storage_state_path-59"><span class="linenos">59</span></a>    <span class="k">return</span> <span class="n">CONFIG_DIR</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">.storage_state.json&quot;</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Path to the persisted Playwright storage state (cookies + localStorage).</p>
+
+<p>Reusing this across runs lets Google recognise an already-authenticated
+browser session and skip the login form, mirroring saml2aws's browser
+provider session-reuse behaviour (see CLAUDE.md).</p>
+</div>
+
+
+                </section>
                 <section id="load">
                             <input id="load-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
@@ -420,14 +464,14 @@
 
     </div>
     <a class="headerlink" href="#load"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="load-52"><a href="#load-52"><span class="linenos">52</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProfileConfig</span><span class="p">:</span>
-</span><span id="load-53"><a href="#load-53"><span class="linenos">53</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">profile_path</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
-</span><span id="load-54"><a href="#load-54"><span class="linenos">54</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-</span><span id="load-55"><a href="#load-55"><span class="linenos">55</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-</span><span id="load-56"><a href="#load-56"><span class="linenos">56</span></a>            <span class="sa">f</span><span class="s2">&quot;No configuration for profile &#39;</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">&#39;. Run `gw2aws configure --profile </span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">` first.&quot;</span>
-</span><span id="load-57"><a href="#load-57"><span class="linenos">57</span></a>        <span class="p">)</span>
-</span><span id="load-58"><a href="#load-58"><span class="linenos">58</span></a>    <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
-</span><span id="load-59"><a href="#load-59"><span class="linenos">59</span></a>        <span class="k">return</span> <span class="n">ProfileConfig</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fp</span><span class="p">))</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="load-62"><a href="#load-62"><span class="linenos">62</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProfileConfig</span><span class="p">:</span>
+</span><span id="load-63"><a href="#load-63"><span class="linenos">63</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">profile_path</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+</span><span id="load-64"><a href="#load-64"><span class="linenos">64</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="load-65"><a href="#load-65"><span class="linenos">65</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+</span><span id="load-66"><a href="#load-66"><span class="linenos">66</span></a>            <span class="sa">f</span><span class="s2">&quot;No configuration for profile &#39;</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">&#39;. Run `gw2aws configure --profile </span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">` first.&quot;</span>
+</span><span id="load-67"><a href="#load-67"><span class="linenos">67</span></a>        <span class="p">)</span>
+</span><span id="load-68"><a href="#load-68"><span class="linenos">68</span></a>    <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+</span><span id="load-69"><a href="#load-69"><span class="linenos">69</span></a>        <span class="k">return</span> <span class="n">ProfileConfig</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fp</span><span class="p">))</span>
 </span></pre></div>
 
 
@@ -445,15 +489,15 @@
 
     </div>
     <a class="headerlink" href="#save"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="save-62"><a href="#save-62"><span class="linenos">62</span></a><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">ProfileConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-</span><span id="save-63"><a href="#save-63"><span class="linenos">63</span></a>    <span class="n">CONFIG_DIR</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="save-64"><a href="#save-64"><span class="linenos">64</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">profile_path</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
-</span><span id="save-65"><a href="#save-65"><span class="linenos">65</span></a>    <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
-</span><span id="save-66"><a href="#save-66"><span class="linenos">66</span></a>        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span> <span class="n">fp</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</span><span id="save-67"><a href="#save-67"><span class="linenos">67</span></a>        <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="save-68"><a href="#save-68"><span class="linenos">68</span></a>    <span class="c1"># Config may contain a password / TOTP secret -- keep it private.</span>
-</span><span id="save-69"><a href="#save-69"><span class="linenos">69</span></a>    <span class="n">path</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="mo">0o600</span><span class="p">)</span>
-</span><span id="save-70"><a href="#save-70"><span class="linenos">70</span></a>    <span class="k">return</span> <span class="n">path</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="save-72"><a href="#save-72"><span class="linenos">72</span></a><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">ProfileConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+</span><span id="save-73"><a href="#save-73"><span class="linenos">73</span></a>    <span class="n">CONFIG_DIR</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="save-74"><a href="#save-74"><span class="linenos">74</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">profile_path</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+</span><span id="save-75"><a href="#save-75"><span class="linenos">75</span></a>    <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+</span><span id="save-76"><a href="#save-76"><span class="linenos">76</span></a>        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span> <span class="n">fp</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span id="save-77"><a href="#save-77"><span class="linenos">77</span></a>        <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="save-78"><a href="#save-78"><span class="linenos">78</span></a>    <span class="c1"># Config may contain a password / TOTP secret -- keep it private.</span>
+</span><span id="save-79"><a href="#save-79"><span class="linenos">79</span></a>    <span class="n">path</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="mo">0o600</span><span class="p">)</span>
+</span><span id="save-80"><a href="#save-80"><span class="linenos">80</span></a>    <span class="k">return</span> <span class="n">path</span>
 </span></pre></div>
 
 
