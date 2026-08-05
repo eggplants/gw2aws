@@ -12,6 +12,7 @@ from __future__ import annotations
 import random
 import re
 import urllib.parse
+from pathlib import Path
 
 import pyotp
 from install_playwright import install
@@ -56,15 +57,24 @@ def fetch_saml_response(
     password: str,
     totp_provider: TotpProvider,
     headless: bool = False,
+    storage_state_path: Path | None = None,
 ) -> str:
-    """Run the browser login and return the base64 SAMLResponse string."""
+    """Run the browser login and return the base64 SAMLResponse string.
+
+    If `storage_state_path` points to a previously saved Playwright storage
+    state (cookies + localStorage), it is loaded into the new context so an
+    already-authenticated Google session can skip straight to the SAML
+    redirect. The (possibly refreshed) state is saved back afterwards so the
+    next run can reuse it too.
+    """
     captured: dict[str, str] = {}
 
     with sync_playwright() as pw:
         # Ensure the Chromium browser is present (installs on first run).
         install([pw.chromium])
         browser = pw.chromium.launch(headless=headless)
-        context = browser.new_context()
+        has_saved_state = storage_state_path is not None and storage_state_path.exists()
+        context = browser.new_context(storage_state=str(storage_state_path) if has_saved_state else None)
         page = context.new_page()
 
         def on_request(request) -> None:
@@ -78,13 +88,18 @@ def fetch_saml_response(
 
         page.on("request", on_request)
 
-        page.goto(_localise(config.url))
-        _google_login(page, config, password, totp_provider)
-
-        _wait_for_capture(page, captured)
-
-        context.close()
-        browser.close()
+        try:
+            page.goto(_localise(config.url))
+            _google_login(page, config, password, totp_provider, captured)
+            _wait_for_capture(page, captured)
+        finally:
+            if storage_state_path:
+                storage_state_path.parent.mkdir(parents=True, exist_ok=True)
+                context.storage_state(path=str(storage_state_path))
+                # May contain a live Google session cookie -- keep it private.
+                storage_state_path.chmod(0o600)
+            context.close()
+            browser.close()
 
     if "saml" not in captured:
         raise LoginError("Did not capture a SAMLResponse from the AWS sign-in POST.")
@@ -112,10 +127,19 @@ def _google_login(
     config: ProfileConfig,
     password: str,
     totp_provider: TotpProvider,
+    captured: dict[str, str],
 ) -> None:
+    # A reused storage state can make Google skip straight to the SAML
+    # redirect without ever rendering the email/password/2FA forms.
+    if "saml" in captured:
+        return
     _fill_email(page, config.email)
+    if "saml" in captured:
+        return
     _fill_password(page, password)
-    _handle_totp(page, totp_provider)
+    if "saml" in captured:
+        return
+    _handle_totp(page, totp_provider, captured)
 
 
 def _fill_email(page: Page, email: str) -> None:
@@ -133,12 +157,16 @@ def _fill_email(page: Page, email: str) -> None:
 
 def _fill_password(page: Page, password: str) -> None:
     password_input = page.locator("input[type='password']")
-    password_input.first.wait_for(state="visible", timeout=STEP_TIMEOUT_MS)
+    try:
+        password_input.first.wait_for(state="visible", timeout=STEP_TIMEOUT_MS)
+    except PWTimeoutError:
+        # Password may already be satisfied by a reused session (storage state).
+        return
     _human_type(page, password_input, password)
     _click_next(page, "#passwordNext")
 
 
-def _handle_totp(page: Page, totp_provider: TotpProvider) -> None:
+def _handle_totp(page: Page, totp_provider: TotpProvider, captured: dict[str, str]) -> None:
     """Reach and complete the Google Authenticator (TOTP) 2-Step Verification.
 
     After the password step Google may land on any of several 2FA defaults:
@@ -147,11 +175,15 @@ def _handle_totp(page: Page, totp_provider: TotpProvider) -> None:
     toward the authenticator TOTP challenge until its input field appears --
     open the method chooser via "Try another way" (never the passkey/device
     "Continue" button), pick the Google Authenticator option, and finally type
-    the code.
+    the code. `captured` is polled so a reused session that redirects straight
+    to the SAML POST (2FA fully skipped) bails out instead of looping.
     """
     totp_input = page.locator(TOTP_INPUT_SELECTOR)
 
     for _ in range(TOTP_NAV_STEPS):
+        if "saml" in captured:
+            return
+
         if _is_visible(totp_input):
             code = totp_provider.code()
             _human_type(page, totp_input, code)
@@ -171,6 +203,8 @@ def _handle_totp(page: Page, totp_provider: TotpProvider) -> None:
         # Nothing actionable yet (page still loading): wait and re-check.
         page.wait_for_timeout(1_000)
 
+    if "saml" in captured:
+        return
     raise LoginError(
         "Could not reach the Google Authenticator (TOTP) challenge: no TOTP field, "
         "authenticator option, or 'Try another way' button was found."

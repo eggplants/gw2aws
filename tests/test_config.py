@@ -63,3 +63,8 @@ def test_save_writes_valid_json(cfg_dir):
 def test_load_missing_profile_raises(cfg_dir):
     with pytest.raises(FileNotFoundError, match="gw2aws configure"):
         config.load("does-not-exist")
+
+
+def test_storage_state_path_is_scoped_to_profile(cfg_dir):
+    assert config.storage_state_path("demo") == cfg_dir / "demo.storage_state.json"
+    assert config.storage_state_path("other") != config.storage_state_path("demo")

@@ -48,6 +48,16 @@ def profile_path(profile: str) -> Path:
     return CONFIG_DIR / f"{profile}.json"
 
 
+def storage_state_path(profile: str) -> Path:
+    """Path to the persisted Playwright storage state (cookies + localStorage).
+
+    Reusing this across runs lets Google recognise an already-authenticated
+    browser session and skip the login form, mirroring saml2aws's browser
+    provider session-reuse behaviour (see CLAUDE.md).
+    """
+    return CONFIG_DIR / f"{profile}.storage_state.json"
+
+
 def load(profile: str) -> ProfileConfig:
     path = profile_path(profile)
     if not path.exists():

@@ -52,7 +52,10 @@ def test_login_headless_defaults_true(monkeypatch):
     monkeypatch.setattr(
         cli,
         "fetch_saml_response",
-        lambda cfg, password, totp_provider, headless: captured.setdefault("headless", headless) or "SAML",
+        lambda cfg, password, totp_provider, headless, storage_state_path=None: captured.setdefault(
+            "headless", headless
+        )
+        or "SAML",
     )
     monkeypatch.setattr(cli.aws, "extract_roles", lambda _s: [ADMIN])
     monkeypatch.setattr(cli.aws, "extract_session_duration", lambda _s, default: default)

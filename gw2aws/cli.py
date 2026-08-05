@@ -106,7 +106,13 @@ def cmd_login(args: argparse.Namespace) -> int:
         "(The first run may take a while to download the headless browser and driver.)",
         file=sys.stderr,
     )
-    saml_assertion = fetch_saml_response(cfg, password=password, totp_provider=totp, headless=args.headless)
+    saml_assertion = fetch_saml_response(
+        cfg,
+        password=password,
+        totp_provider=totp,
+        headless=args.headless,
+        storage_state_path=config.storage_state_path(args.profile),
+    )
 
     roles = aws.extract_roles(saml_assertion)
     if not roles:
