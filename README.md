@@ -22,6 +22,10 @@ pipx install gw2aws
 pip install gw2aws
 ```
 
+## Requirements
+
+You must have a Google Workspace account with [2FA enabled and TOTP registered as an authentication method](https://support.google.com/accounts/answer/1066447).
+
 ## Usage
 
 ```bash
