@@ -17,8 +17,13 @@ Based on the behavior of the [`saml2aws`](https://github.com/Versent/saml2aws) B
 ## Install
 
 ```bash
+# mise
+mise use -g pipx:gw2aws@<pypi version>
+
+# pipx
 pipx install gw2aws
-# or
+
+# pip
 pip install gw2aws
 ```
 
