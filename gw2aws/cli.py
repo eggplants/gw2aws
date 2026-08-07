@@ -8,6 +8,7 @@ import sys
 
 from gw2aws import aws, config
 from gw2aws.browser import LoginError, TotpProvider, fetch_saml_response, is_chromium_installed
+from gw2aws.secrets import resolve_secret
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -64,13 +65,16 @@ def cmd_configure(args: argparse.Namespace) -> int:
 
     print(f"Configuring profile '{args.profile}'. Press Enter to keep the current value.\n")
 
+    print("Tip: email, password and TOTP accept a 1Password reference (op://...),")
+    print("resolved via `op read` at login time instead of storing the secret itself.\n")
+
     url = _prompt("Google SAML SSO login URL", existing.url)
-    email = _prompt("Google Workspace email", existing.email)
+    email = _prompt("Google Workspace email (or op://...)", existing.email)
 
     print("\nPassword and TOTP are optional. If left blank you will be prompted at login.")
-    print("If provided, they are stored in plaintext (file mode 0600).")
-    password = getpass.getpass("Google password (optional, hidden): ").strip() or existing.password
-    totp_url = _prompt("TOTP otpauth:// URL (optional)", existing.totp_url)
+    print("If provided, they are stored in plaintext (file mode 0600) unless you use an op:// reference.")
+    password = getpass.getpass("Google password (optional, hidden; op:// allowed): ").strip() or existing.password
+    totp_url = _prompt("TOTP otpauth:// URL or op:// reference (optional)", existing.totp_url)
 
     region = _prompt("AWS region for STS", existing.region or "us-east-1")
     role_arn = _prompt("Default role ARN (optional, skips role prompt)", existing.role_arn)
@@ -109,12 +113,14 @@ def cmd_login(args: argparse.Namespace) -> int:
     if not cfg.url or not cfg.email:
         raise ValueError(f"Profile '{args.profile}' is missing url/email. Run `gw2aws configure` first.")
 
-    password = cfg.password
+    # Any of these fields may be a 1Password `op://` reference; expand them here.
+    cfg.email = resolve_secret(cfg.email)
+    password = resolve_secret(cfg.password)
     if not password:
         password = getpass.getpass(f"Google password for {cfg.email}: ")
 
     totp = TotpProvider(
-        totp_url=cfg.totp_url,
+        totp_url=resolve_secret(cfg.totp_url),
         prompt=lambda: input("TOTP code: ").strip(),
     )
 
