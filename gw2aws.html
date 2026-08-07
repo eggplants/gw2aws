@@ -28,6 +28,7 @@
     <li><a href="#install">Install</a></li>
     <li><a href="#requirements">Requirements</a></li>
     <li><a href="#usage">Usage</a></li>
+    <li><a href="#configuration">Configuration</a></li>
     <li><a href="#references">References</a></li>
   </ul></li>
 </ul>
@@ -72,7 +73,7 @@ gw2aws    </h1>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="c1"># mise</span>
-mise<span class="w"> </span>use<span class="w"> </span>-g<span class="w"> </span>pipx:gw2aws@&lt;pypi<span class="w"> </span>version&gt;
+mise<span class="w"> </span>use<span class="w"> </span>-g<span class="w"> </span>pipx:gw2aws
 
 <span class="c1"># pipx</span>
 pipx<span class="w"> </span>install<span class="w"> </span>gw2aws
@@ -97,6 +98,78 @@ gw2aws<span class="w"> </span>login<span class="w"> </span>--profile<span class=
 aws<span class="w"> </span>--profile<span class="w"> </span>myprofile<span class="w"> </span>sts<span class="w"> </span>get-caller-identity
 </code></pre>
 </div>
+
+<h2 id="configuration">Configuration</h2>
+
+<p><code>gw2aws configure</code> writes a per-profile JSON file. Each profile holds:</p>
+
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Description</th>
+  <th style="text-align:center;"><code>op://</code> ok?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>url</code></td>
+  <td>Google IdP-initiated SSO (SAML) login URL</td>
+  <td style="text-align:center;"></td>
+</tr>
+<tr>
+  <td><code>email</code></td>
+  <td>Google Workspace account email</td>
+  <td style="text-align:center;">✅</td>
+</tr>
+<tr>
+  <td><code>password</code></td>
+  <td>Google password (optional; prompted at login if empty)</td>
+  <td style="text-align:center;">✅</td>
+</tr>
+<tr>
+  <td><code>totp_url</code></td>
+  <td><code>otpauth://</code> URL for TOTP (optional; prompted at login if empty)</td>
+  <td style="text-align:center;">✅</td>
+</tr>
+<tr>
+  <td><code>region</code></td>
+  <td>AWS region for the STS call (default <code>us-east-1</code>)</td>
+  <td style="text-align:center;"></td>
+</tr>
+<tr>
+  <td><code>role_arn</code></td>
+  <td>Role to auto-select (optional; prompted if empty and multiple roles)</td>
+  <td style="text-align:center;"></td>
+</tr>
+<tr>
+  <td><code>session_duration</code></td>
+  <td>STS credential lifetime in seconds (default <code>3600</code>)</td>
+  <td style="text-align:center;"></td>
+</tr>
+<tr>
+  <td><code>save_session_cookie</code></td>
+  <td>Persist the Google session cookie to skip login on reuse</td>
+  <td style="text-align:center;"></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="storage-locations">Storage locations</h3>
+
+<ul>
+<li>Profile config: <code>~/.config/gw2aws/&lt;profile&gt;.json</code> (mode <code>0600</code>; honors <code>GW2AWS_CONFIG_DIR</code> / <code>XDG_CONFIG_HOME</code>)</li>
+<li>Session cookie: <code>~/.config/gw2aws/&lt;profile&gt;.storage_state.json</code></li>
+<li>AWS credentials: <code>~/.aws/credentials</code> (written under the profile name on login)</li>
+</ul>
+
+<h3 id="1password-references">1Password references</h3>
+
+<p><code>email</code>, <code>password</code>, and <code>totp_url</code> can be set to a 1Password secret reference
+(<code>op://vault/item/field</code>) instead of the raw value. At login time they are
+resolved via <code>op read</code>, so nothing secret is stored in the profile JSON. This
+requires the <a href="https://developer.1password.com/docs/cli/">1Password CLI</a> to be
+installed and signed in.</p>
 
 <h2 id="references">References</h2>
 
