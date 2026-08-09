@@ -38,6 +38,7 @@ gw2aws configure --profile myprofile
 
 gw2aws login --profile myprofile
 gw2aws login --profile myprofile --no-headless
+gw2aws login --profile myprofile --force
 
 aws --profile myprofile sts get-caller-identity
 ```
@@ -55,7 +56,7 @@ aws --profile myprofile sts get-caller-identity
 | `region` | AWS region for the STS call (default `us-east-1`) | |
 | `role_arn` | Role to auto-select (optional; prompted if empty and multiple roles) | |
 | `session_duration` | STS credential lifetime in seconds (default `3600`) | |
-| `save_session_cookie` | Persist the Google session cookie to skip login on reuse | |
+| `save_session_cookie` | Persist the Google session cookie to skip login on reuse (`--force` bypasses it) | |
 
 ### Storage locations
 

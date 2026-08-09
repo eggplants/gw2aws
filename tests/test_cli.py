@@ -45,19 +45,18 @@ def test_main_reports_missing_profile(capsys, tmp_path, monkeypatch):
     assert "error:" in capsys.readouterr().err
 
 
-def test_login_headless_defaults_true(monkeypatch):
+def _stub_login(monkeypatch):
+    """Wire up a login that touches no browser/AWS; returns the captured kwargs."""
     captured = {}
     cfg = config.ProfileConfig(url="https://x", email="a@b.com", password="pw")
     monkeypatch.setattr(config, "load", lambda _profile: cfg)
     monkeypatch.setattr(cli, "is_chromium_installed", lambda: True)
-    monkeypatch.setattr(
-        cli,
-        "fetch_saml_response",
-        lambda cfg, password, totp_provider, headless, storage_state_path=None: captured.setdefault(
-            "headless", headless
-        )
-        or "SAML",
-    )
+
+    def fake_fetch(_cfg, **kwargs):
+        captured.update(kwargs)
+        return "SAML"
+
+    monkeypatch.setattr(cli, "fetch_saml_response", fake_fetch)
     monkeypatch.setattr(cli.aws, "extract_roles", lambda _s: [ADMIN])
     monkeypatch.setattr(cli.aws, "extract_session_duration", lambda _s, default: default)
 
@@ -67,6 +66,35 @@ def test_login_headless_defaults_true(monkeypatch):
 
     monkeypatch.setattr(cli.aws, "assume_role", lambda *a, **k: FakeCreds())
     monkeypatch.setattr(cli.aws, "save_credentials", lambda _p, _c: "/tmp/creds")
+    return captured
 
+
+def test_login_is_headless_by_default(monkeypatch):
+    captured = _stub_login(monkeypatch)
     assert cli.main(["login", "--profile", "demo"]) == 0
     assert captured["headless"] is True
+
+
+def test_login_no_headless_shows_the_browser(monkeypatch):
+    captured = _stub_login(monkeypatch)
+    assert cli.main(["login", "--profile", "demo", "--no-headless"]) == 0
+    assert captured["headless"] is False
+
+
+def test_login_keeps_the_saved_session_by_default(monkeypatch):
+    captured = _stub_login(monkeypatch)
+    assert cli.main(["login", "--profile", "demo"]) == 0
+    assert captured["ignore_saved_session"] is False
+
+
+def test_login_force_ignores_the_saved_session(monkeypatch):
+    captured = _stub_login(monkeypatch)
+    assert cli.main(["login", "--profile", "demo", "--force"]) == 0
+    assert captured["ignore_saved_session"] is True
+
+
+def test_login_rejects_the_removed_headless_flag(monkeypatch):
+    _stub_login(monkeypatch)
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["login", "--profile", "demo", "--headless"])
+    assert exc.value.code == 2

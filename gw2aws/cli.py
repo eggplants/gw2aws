@@ -7,7 +7,13 @@ import getpass
 import sys
 
 from gw2aws import aws, config
-from gw2aws.browser import LoginError, TotpProvider, fetch_saml_response, is_chromium_installed
+from gw2aws.browser import (
+    LoginError,
+    PasswordProvider,
+    TotpProvider,
+    fetch_saml_response,
+    is_chromium_installed,
+)
 from gw2aws.secrets import resolve_secret
 
 
@@ -25,10 +31,15 @@ def main(argv: list[str] | None = None) -> int:
     p_login = sub.add_parser("login", help="Log in and write AWS credentials.")
     p_login.add_argument("-p", "--profile", required=True, help="AWS profile name.")
     p_login.add_argument(
-        "--headless",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Run the browser headlessly (no visible window). Use --no-headless to show it.",
+        "--no-headless",
+        dest="headless",
+        action="store_false",
+        help="Show the browser window instead of running headlessly (for debugging the login flow).",
+    )
+    p_login.add_argument(
+        "--force",
+        action="store_true",
+        help="Ignore the saved Google session cookie and log in from scratch; the cookie is refreshed on success.",
     )
     p_login.set_defaults(func=cmd_login)
 
@@ -115,9 +126,13 @@ def cmd_login(args: argparse.Namespace) -> int:
 
     # Any of these fields may be a 1Password `op://` reference; expand them here.
     cfg.email = resolve_secret(cfg.email)
-    password = resolve_secret(cfg.password)
-    if not password:
-        password = getpass.getpass(f"Google password for {cfg.email}: ")
+    # Both providers prompt lazily: a run that reuses a stored session, or one
+    # whose password is refused, asks only when the form is actually in front
+    # of us -- and asks again for every retry.
+    password = PasswordProvider(
+        resolve_secret(cfg.password),
+        prompt=lambda: getpass.getpass(f"Google password for {cfg.email}: "),
+    )
 
     totp = TotpProvider(
         totp_url=resolve_secret(cfg.totp_url),
@@ -132,10 +147,11 @@ def cmd_login(args: argparse.Namespace) -> int:
         )
     saml_assertion = fetch_saml_response(
         cfg,
-        password=password,
+        password_provider=password,
         totp_provider=totp,
         headless=args.headless,
         storage_state_path=config.storage_state_path(args.profile) if cfg.save_session_cookie else None,
+        ignore_saved_session=args.force,
     )
 
     roles = aws.extract_roles(saml_assertion)
