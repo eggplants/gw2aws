@@ -94,6 +94,7 @@ pip<span class="w"> </span>install<span class="w"> </span>gw2aws
 
 gw2aws<span class="w"> </span>login<span class="w"> </span>--profile<span class="w"> </span>myprofile
 gw2aws<span class="w"> </span>login<span class="w"> </span>--profile<span class="w"> </span>myprofile<span class="w"> </span>--no-headless
+gw2aws<span class="w"> </span>login<span class="w"> </span>--profile<span class="w"> </span>myprofile<span class="w"> </span>--force
 
 aws<span class="w"> </span>--profile<span class="w"> </span>myprofile<span class="w"> </span>sts<span class="w"> </span>get-caller-identity
 </code></pre>
@@ -149,7 +150,7 @@ aws<span class="w"> </span>--profile<span class="w"> </span>myprofile<span class
 </tr>
 <tr>
   <td><code>save_session_cookie</code></td>
-  <td>Persist the Google session cookie to skip login on reuse</td>
+  <td>Persist the Google session cookie to skip login on reuse (<code>--force</code> bypasses it)</td>
   <td style="text-align:center;"></td>
 </tr>
 </tbody>
