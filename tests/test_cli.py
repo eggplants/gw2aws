@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from gw2aws import cli, config
+from gw2aws import __version__, cli, config
 from gw2aws.aws import AWSRole
 from gw2aws.browser import LoginError
 
@@ -43,6 +43,14 @@ def test_main_reports_missing_profile(capsys, tmp_path, monkeypatch):
     monkeypatch.setattr(config, "CONFIG_DIR", tmp_path)
     assert cli.main(["login", "--profile", "ghost"]) == 1
     assert "error:" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("flag", ["-V", "--version"])
+def test_version_flag_prints_version_and_exits(capsys, flag):
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main([flag])
+    assert excinfo.value.code == 0
+    assert capsys.readouterr().out.strip() == f"gw2aws {__version__}"
 
 
 def _stub_login(monkeypatch):

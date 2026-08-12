@@ -6,7 +6,7 @@ import argparse
 import getpass
 import sys
 
-from gw2aws import aws, config
+from gw2aws import __version__, aws, config
 from gw2aws.browser import (
     LoginError,
     PasswordProvider,
@@ -21,6 +21,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="gw2aws",
         description="SAML login to AWS via Google Workspace (Playwright).",
+    )
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+        help="Show the version and exit.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
