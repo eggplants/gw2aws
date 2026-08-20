@@ -271,6 +271,75 @@ def test_ordinary_page_is_not_treated_as_a_rejection():
     browser._raise_if_rejected(cast("Any", FakeTotpPage(["accept"])))
 
 
+class FakeIdentifierPage:
+    """The first login page: an email form, or the re-auth confirmation.
+
+    `email_visible=False` models Google's "Verify it's you" interstitial, where
+    the identifier input is present but `type="hidden"` and already filled in.
+    """
+
+    def __init__(self, *, email_visible: bool):
+        self.email_visible = email_visible
+        self.clicked = False
+        self.typed = ""
+        self.keyboard = self
+
+    def locator(self, selector):
+        if selector == browser.EMAIL_INPUT_SELECTOR:
+            return FakeLocator(lambda: self.email_visible)
+        if selector == browser.HIDDEN_IDENTIFIER_SELECTOR:
+            return FakeLocator(lambda: False, count=0 if self.email_visible else 1)
+        if selector == browser.IDENTIFIER_NEXT_SELECTOR:
+            return FakeLocator(lambda: True, on_click=self._click)
+        return FakeLocator(lambda: False, count=0)
+
+    def get_by_text(self, text, exact=False):
+        return FakeLocator(lambda: False)
+
+    def insert_text(self, char):
+        self.typed += char
+
+    def press(self, _key):
+        self._click()
+
+    def wait_for_timeout(self, _ms):
+        pass
+
+    def _click(self):
+        self.clicked = True
+
+
+def _run_email(page, captured=None):
+    """Call the first-page handler with a stand-in page."""
+    return browser._fill_email(cast("Any", page), "a@b.com", captured if captured is not None else {})
+
+
+def test_email_form_is_typed_in_and_submitted():
+    page = FakeIdentifierPage(email_visible=True)
+    _run_email(page)
+    assert page.typed == "a@b.com"
+    assert page.clicked
+
+
+def test_reauth_interstitial_is_confirmed_without_retyping_the_email():
+    """ "Verify it's you" only needs the Next click -- there is no field to fill."""
+    page = FakeIdentifierPage(email_visible=False)
+    _run_email(page)
+    assert page.clicked
+    assert page.typed == ""
+
+
+def test_first_page_bails_out_when_the_assertion_already_arrived():
+    page = FakeIdentifierPage(email_visible=True)
+    _run_email(page, {"saml": "ASSERTION"})
+    assert not page.clicked
+
+
+def test_first_page_fails_fast_on_an_error_page():
+    with pytest.raises(browser.LoginError, match="Google"):
+        _run_email(FakeRejectedPage())
+
+
 def _run_totp(page, provider, captured=None):
     """Call the TOTP handler with a stand-in page."""
     return browser._handle_totp(cast("Any", page), provider, captured if captured is not None else {})
