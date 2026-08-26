@@ -66,6 +66,9 @@ lint.ignore = [
 lint.per-file-ignores."main.py" = [
   "T201", # `print` found
 ]
+lint.per-file-ignores."packaging/entrypoint.py" = [
+  "INP001", # Implicit namespace package (frozen entry point, not importable content)
+]
 lint.per-file-ignores."tests/**" = [
   "ANN",     # Missing type annotations (tests/fixtures)
   "ARG",     # Unused arguments (pytest fixtures, lambda stubs)

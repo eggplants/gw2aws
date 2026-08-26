@@ -53,6 +53,12 @@ AUTHENTICATOR_OPTION = [
     "認証システム",
 ]
 
+EMAIL_INPUT_SELECTOR = "input#identifierId, input[name='identifier'], input[type='email']"
+# The "Verify it's you" re-auth interstitial keeps the identifier on the page
+# as a hidden, already-filled input: there is nothing to type, only to confirm.
+HIDDEN_IDENTIFIER_SELECTOR = "input[name='identifier'][type='hidden'], input#identifierId[type='hidden']"
+IDENTIFIER_NEXT_SELECTOR = "#identifierNext"
+
 TOTP_INPUT_SELECTOR = "input#totpPin, input[name='totpPin'], input[name='Pin']"
 
 # What Google renders when it refuses a submitted secret.
@@ -300,16 +306,40 @@ def _wait_visible_or_captured(page: Page, locator, captured: dict[str, str], tim
     return False
 
 
-def _fill_email(page: Page, email: str, captured: dict[str, str]) -> None:
+def _wait_for_identifier_form(page: Page, captured: dict[str, str]) -> str:
+    """Poll for whichever first page Google renders.
+
+    Returns "email" for the typable form, "reauth" for the "Verify it's you"
+    interstitial, and "" when neither shows up -- the email was already chosen
+    (login_hint / account chooser skipped) or a reused session produced the
+    SAMLResponse without any form at all. Both forms are polled together so a
+    re-auth does not sit out the whole email-field timeout first.
+    """
     # Google's email field is a text input (name="identifier"/id="identifierId"),
     # not type="email".
-    email_input = page.locator("input#identifierId, input[name='identifier'], input[type='email']")
-    if not _wait_visible_or_captured(page, email_input, captured, STEP_TIMEOUT_MS):
-        # Email may already be chosen (login_hint / account chooser skipped),
-        # or the SAMLResponse was already captured (reused session).
+    email_input = page.locator(EMAIL_INPUT_SELECTOR)
+    hidden_identifier = page.locator(HIDDEN_IDENTIFIER_SELECTOR)
+    waited = 0
+    while waited < STEP_TIMEOUT_MS:
+        if "saml" in captured:
+            return ""
+        if _is_visible(email_input):
+            return "email"
+        if hidden_identifier.count() > 0:
+            return "reauth"
+        _raise_if_rejected(page)
+        page.wait_for_timeout(POLL_INTERVAL_MS)
+        waited += POLL_INTERVAL_MS
+    return ""
+
+
+def _fill_email(page: Page, email: str, captured: dict[str, str]) -> None:
+    form = _wait_for_identifier_form(page, captured)
+    if not form:
         return
-    _human_type(page, email_input, email)
-    _click_next(page, "#identifierNext")
+    if form == "email":
+        _human_type(page, page.locator(EMAIL_INPUT_SELECTOR), email)
+    _click_next(page, IDENTIFIER_NEXT_SELECTOR)
 
 
 def _fill_password(page: Page, password_provider: PasswordProvider, captured: dict[str, str]) -> None:

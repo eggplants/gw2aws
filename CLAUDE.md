@@ -22,6 +22,7 @@ mise run ruff                 # format (uv format)
 mise run ty                   # type-check (uvx ty check)
 mise run pre-commit           # ruff + ty + pymarkdown + pyproject-fmt
 mise run ci                   # pre-commit + pytest-cov
+mise run build-binary         # PyInstaller standalone binary into dist/
 ```
 
 The Chromium browser is installed automatically on first `login` via `install-playwright`; no manual `playwright install` step is needed.
@@ -45,6 +46,14 @@ The login flow is a pipeline across four modules in `gw2aws/`:
 3. **`aws.py`** — Parses the SAML assertion (namespace-agnostic XML walk) for the `https://aws.amazon.com/SAML/Attributes/Role` values, calls `sts:AssumeRoleWithSAML` (an unauthenticated call — no existing AWS creds needed, only a region), and writes credentials to `~/.aws/credentials`. **`save_credentials` deletes and rewrites the whole profile section** so stale keys don't linger — critical because botocore reads legacy `aws_security_token` *before* `aws_session_token`, so a leftover mismatched token causes `InvalidClientTokenId`. Both keys are written in sync.
 
 4. **`cli.py`** — argparse entry point (`gw2aws configure|login`, both accept `-p`/`--profile`). `login` always runs headless; only `--no-headless` (a `store_false` on `headless`) opts out, for debugging. `--force` passes `ignore_saved_session=True` so the stored session cookie is skipped for that run (and rewritten once the login succeeds). Orchestrates: load config → build `PasswordProvider`/`TotpProvider` (which prompt lazily, mid-login) → `fetch_saml_response` → `extract_roles` → resolve role (auto if one or `role_arn` set, else prompt) → `assume_role` → `save_credentials`.
+
+## Packaging
+
+`packaging/gw2aws.spec` + `packaging/entrypoint.py` freeze the CLI into a single-file binary; `.github/workflows/build-binaries.yml` builds one per OS/arch on a `v*.*.*` tag (natively per runner — PyInstaller cannot cross-compile) and attaches them to the release. Three things the spec/entrypoint exist to handle:
+
+- Playwright has no PyInstaller hook, so the spec `collect_all`s it, and moves `driver/node` into `binaries` (only those keep the +x bit and get macOS-signed).
+- `copy_metadata("gw2aws")` — `__version__` reads distribution metadata, which is not package content.
+- Playwright forces `PLAYWRIGHT_BROWSERS_PATH=0` for frozen apps, which would download Chromium into PyInstaller's temp unpack dir and lose it on exit; the entrypoint points it at the normal per-user cache instead.
 
 ## Gotchas
 

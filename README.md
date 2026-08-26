@@ -17,7 +17,10 @@ Based on the behavior of the [`saml2aws`](https://github.com/Versent/saml2aws) B
 ## Install
 
 ```bash
-# mise
+# mise via github
+mise use -g github:eggplants/gw2aws
+
+# mise via pipx
 mise use -g pipx:gw2aws
 
 # pipx
