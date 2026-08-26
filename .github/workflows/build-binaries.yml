@@ -57,8 +57,8 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
-  release-assets:
-    name: attach binaries to release
+  release:
+    name: publish release with binaries
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
@@ -83,5 +83,10 @@ jobs:
           ls -l release
       - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
+          draft: true
           files: release/*
           fail_on_unmatched_files: true
+      - name: Publish the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ github.ref_name }}" --draft=false --repo "${{ github.repository }}"

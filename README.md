@@ -30,6 +30,27 @@ pipx install gw2aws
 pip install gw2aws
 ```
 
+### Docker
+
+Multi-arch images are published to GHCR on each release:
+
+```bash
+docker pull ghcr.io/eggplants/gw2aws
+```
+
+The container needs the profile config and `~/.aws` mounted, and `-it` so the
+password/TOTP prompts work:
+
+```bash
+docker run --rm -it \
+  -v "$HOME/.config/gw2aws:/root/.config/gw2aws" \
+  -v "$HOME/.aws:/root/.aws" \
+  ghcr.io/eggplants/gw2aws login --profile myprofile
+```
+
+`--no-headless` is not usable in the container (no display); the default
+headless login is what runs there.
+
 ## Requirements
 
 You must have a Google Workspace account with [2FA enabled and TOTP registered as an authentication method](https://support.google.com/accounts/answer/1066447).

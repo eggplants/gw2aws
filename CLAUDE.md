@@ -49,11 +49,13 @@ The login flow is a pipeline across four modules in `gw2aws/`:
 
 ## Packaging
 
-`packaging/gw2aws.spec` + `packaging/entrypoint.py` freeze the CLI into a single-file binary; `.github/workflows/build-binaries.yml` builds one per OS/arch on a `v*.*.*` tag (natively per runner — PyInstaller cannot cross-compile) and attaches them to the release. Three things the spec/entrypoint exist to handle:
+`packaging/gw2aws.spec` + `packaging/entrypoint.py` freeze the CLI into a single-file binary; `.github/workflows/build-binaries.yml` builds one per OS/arch on a `v*.*.*` tag (natively per runner — PyInstaller cannot cross-compile), then creates the GitHub release. Because the repo has **immutable releases** enabled — assets are locked once a release is published — the release must be created as a `draft: true` with its assets attached, and published only afterwards (`gh release edit --draft=false`). `release.yml` therefore no longer creates the release; it runs the PyPI publish off the `release: [published]` event. Three things the spec/entrypoint exist to handle:
 
 - Playwright has no PyInstaller hook, so the spec `collect_all`s it, and moves `driver/node` into `binaries` (only those keep the +x bit and get macOS-signed).
 - `copy_metadata("gw2aws")` — `__version__` reads distribution metadata, which is not package content.
 - Playwright forces `PLAYWRIGHT_BROWSERS_PATH=0` for frozen apps, which would download Chromium into PyInstaller's temp unpack dir and lose it on exit; the entrypoint points it at the normal per-user cache instead.
+
+`Dockerfile` + the `ghcr` job in `release.yml` publish `ghcr.io/eggplants/gw2aws` on the same `release: [published]` event. The image installs from `git+https://github.com/eggplants/gw2aws@${VERSION}` (passed as a build arg from the release tag) rather than copying the build context — a git clone carries the tags that `uv-dynamic-versioning` needs, so `--version` reports the real version instead of the `0.0.0` fallback. `.dockerignore` therefore excludes everything but the Dockerfile. The image is multi-arch: the `ghcr` job matrixes over `ubuntu-latest`/`ubuntu-24.04-arm` and pushes each arch **by digest only** (`push-by-digest=true`, no tags), and `ghcr-merge` joins those digests into one tagged manifest list via `docker buildx imagetools create` — native runners rather than QEMU, matching `build-binaries.yml`, because emulating `pip install` + `playwright install chromium` is far slower than a second runner. **The `playwright install chromium` step is not redundant with the `mcr.microsoft.com/playwright/python` base image**: pip resolves whatever playwright version `playwright>=1.40` allows, which routinely outranks the base image's, and a mismatched revision makes `install([pw.chromium])` re-download Chromium inside the container on every run.
 
 ## Gotchas
 
