@@ -86,6 +86,29 @@ pip<span class="w"> </span>install<span class="w"> </span>gw2aws
 </code></pre>
 </div>
 
+<h3 id="docker">Docker</h3>
+
+<p>Multi-arch images are published to GHCR on each release:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>docker<span class="w"> </span>pull<span class="w"> </span>ghcr.io/eggplants/gw2aws
+</code></pre>
+</div>
+
+<p>The container needs the profile config and <code>~/.aws</code> mounted, and <code>-it</code> so the
+password/TOTP prompts work:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-it<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-v<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.config/gw2aws:/root/.config/gw2aws&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-v<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/.aws:/root/.aws&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>ghcr.io/eggplants/gw2aws<span class="w"> </span>login<span class="w"> </span>--profile<span class="w"> </span>myprofile
+</code></pre>
+</div>
+
+<p><code>--no-headless</code> is not usable in the container (no display); the default
+headless login is what runs there.</p>
+
 <h2 id="requirements">Requirements</h2>
 
 <p>You must have a Google Workspace account with <a href="https://support.google.com/accounts/answer/1066447">2FA enabled and TOTP registered as an authentication method</a>.</p>
