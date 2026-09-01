@@ -21,7 +21,7 @@ license = { text = "MIT" }
 authors = [ { name = "eggplants" } ]
 requires-python = ">=3.11"
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 3 - Alpha",
   "Environment :: Console",
   "Intended Audience :: Developers",
   "Intended Audience :: System Administrators",
