@@ -6,16 +6,35 @@ requires = [ "hatchling", "uv-dynamic-versioning" ]
 name = "gw2aws"
 description = "SAML login to AWS via Google Workspace using Playwright"
 readme = "README.md"
+keywords = [
+  "aws",
+  "cli",
+  "google-workspace",
+  "mfa",
+  "playwright",
+  "saml",
+  "single-sign-on",
+  "sso",
+  "sts",
+]
 license = { text = "MIT" }
 authors = [ { name = "eggplants" } ]
 requires-python = ">=3.11"
 classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
   "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Topic :: Security",
+  "Topic :: System :: Systems Administration :: Authentication/Directory",
+  "Topic :: Utilities",
   "Typing :: Typed",
 ]
 dynamic = [ "version" ]
@@ -25,6 +44,8 @@ dependencies = [
   "playwright>=1.40",
   "pyotp>=2.9",
 ]
+urls.Documentation = "https://egpl.dev/gw2aws/"
+urls.Issues = "https://github.com/eggplants/gw2aws/issues"
 urls.Repository = "https://github.com/eggplants/gw2aws"
 scripts.gw2aws = "gw2aws.cli:main"
 
