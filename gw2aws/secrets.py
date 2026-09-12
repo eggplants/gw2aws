@@ -24,10 +24,11 @@ def resolve_secret(value: str) -> str:
         return value
 
     if shutil.which("op") is None:
-        raise ValueError(
+        msg = (
             f"'{value}' is a 1Password reference but the `op` CLI is not installed. "
             "Install the 1Password CLI: https://developer.1password.com/docs/cli/"
         )
+        raise ValueError(msg)
 
     try:
         result = subprocess.run(  # noqa: S603
@@ -38,6 +39,7 @@ def resolve_secret(value: str) -> str:
         )
     except subprocess.CalledProcessError as exc:
         detail = (exc.stderr or exc.stdout or "").strip()
-        raise ValueError(f"Failed to resolve 1Password reference '{value}': {detail}") from exc
+        msg = f"Failed to resolve 1Password reference '{value}': {detail}"
+        raise ValueError(msg) from exc
 
     return result.stdout.strip()

@@ -64,9 +64,8 @@ def storage_state_path(profile: str) -> Path:
 def load(profile: str) -> ProfileConfig:
     path = profile_path(profile)
     if not path.exists():
-        raise FileNotFoundError(
-            f"No configuration for profile '{profile}'. Run `gw2aws configure --profile {profile}` first."
-        )
+        msg = f"No configuration for profile '{profile}'. Run `gw2aws configure --profile {profile}` first."
+        raise FileNotFoundError(msg)
     with path.open(encoding="utf-8") as fp:
         return ProfileConfig.from_dict(json.load(fp))
 

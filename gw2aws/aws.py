@@ -5,11 +5,14 @@ from __future__ import annotations
 import base64
 import configparser
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 from xml.etree import ElementTree
 
 import boto3
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 ROLE_ATTR = "https://aws.amazon.com/SAML/Attributes/Role"
 SESSION_DURATION_ATTR = "https://aws.amazon.com/SAML/Attributes/SessionDuration"
@@ -26,9 +29,9 @@ class AWSRole:
         try:
             account = self.role_arn.split(":")[4]
             role = self.role_arn.split(":role/", 1)[1]
-            return f"{account} / {role}"
         except (IndexError, ValueError):
             return self.role_arn
+        return f"{account} / {role}"
 
 
 def _decode(saml_assertion: str) -> bytes:
@@ -62,7 +65,8 @@ def _parse_role(value: str) -> AWSRole:
         elif ":role/" in part:
             role_arn = part
     if not role_arn or not principal_arn:
-        raise ValueError(f"Malformed SAML role attribute value: {value!r}")
+        msg = f"Malformed SAML role attribute value: {value!r}"
+        raise ValueError(msg)
     return AWSRole(role_arn=role_arn, principal_arn=principal_arn)
 
 

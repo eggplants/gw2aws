@@ -23,14 +23,16 @@ from typing import TYPE_CHECKING
 
 import pyotp
 from install_playwright import install
-from playwright.sync_api import BrowserContext, Page, sync_playwright
 from playwright.sync_api import Error as PWError
 from playwright.sync_api import TimeoutError as PWTimeoutError
-
-from gw2aws.config import ProfileConfig
+from playwright.sync_api import sync_playwright
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
+
+    from playwright.sync_api import BrowserContext, Locator, Page, Request
+
+    from gw2aws.config import ProfileConfig
 
 # https://docs.aws.amazon.com/general/latest/gr/signin-service.html
 SIGNIN_RE = re.compile(r"https://((.*\.)?signin\.(aws\.amazon\.com|amazonaws-us-gov\.com|amazonaws\.cn))/saml")
@@ -166,9 +168,9 @@ def fetch_saml_response(
     config: ProfileConfig,
     password_provider: PasswordProvider,
     totp_provider: TotpProvider,
+    *,
     headless: bool = False,
     storage_state_path: Path | None = None,
-    *,
     ignore_saved_session: bool = False,
 ) -> str:
     """Run the browser login and return the base64 SAMLResponse string.
@@ -193,7 +195,7 @@ def fetch_saml_response(
         context = browser.new_context(storage_state=str(storage_state_path) if has_saved_state else None)
         page = context.new_page()
 
-        def on_request(request) -> None:
+        def on_request(request: Request) -> None:
             if request.method == "POST" and SIGNIN_RE.match(request.url):
                 data = request.post_data
                 if not data:
@@ -223,7 +225,8 @@ def fetch_saml_response(
                 browser.close()
 
     if "saml" not in captured:
-        raise LoginError("Did not capture a SAMLResponse from the AWS sign-in POST.")
+        msg = "Did not capture a SAMLResponse from the AWS sign-in POST."
+        raise LoginError(msg)
     return captured["saml"]
 
 
@@ -285,7 +288,7 @@ def _google_login(
     _handle_totp(page, totp_provider, captured)
 
 
-def _wait_visible_or_captured(page: Page, locator, captured: dict[str, str], timeout_ms: int) -> bool:
+def _wait_visible_or_captured(page: Page, locator: Locator, captured: dict[str, str], timeout_ms: int) -> bool:
     """Poll for `locator` to become visible, bailing early if `captured` fills in.
 
     A plain `locator.wait_for(state="visible", timeout=...)` blocks for the
@@ -418,13 +421,14 @@ def _handle_totp(page: Page, totp_provider: TotpProvider, captured: dict[str, st
 
     if "saml" in captured:
         return
-    raise LoginError(
+    msg = (
         "Could not reach the Google Authenticator (TOTP) challenge: no TOTP field, "
         "authenticator option, or 'Try another way' button was found."
     )
+    raise LoginError(msg)
 
 
-def _submit_secret(page: Page, field, secret: str, next_selector: str) -> None:
+def _submit_secret(page: Page, field: Locator, secret: str, next_selector: str) -> None:
     """Type `secret` into `field` and submit it."""
     # A rejected attempt leaves its text in the field; typing would append.
     with contextlib.suppress(PWTimeoutError, PWError):
@@ -433,7 +437,7 @@ def _submit_secret(page: Page, field, secret: str, next_selector: str) -> None:
     _click_next(page, next_selector)
 
 
-def _challenge_cleared(page: Page, field, captured: dict[str, str], rejected_texts: list[str]) -> bool:
+def _challenge_cleared(page: Page, field: Locator, captured: dict[str, str], rejected_texts: list[str]) -> bool:
     """Follow a submitted secret to its verdict: True once Google moves on.
 
     Google answers a wrong password or code by re-rendering the same form with
@@ -510,7 +514,7 @@ def _click_if_visible(page: Page, texts: list[str]) -> bool:
     return False
 
 
-def _is_visible(locator) -> bool:
+def _is_visible(locator: Locator) -> bool:
     try:
         return locator.first.is_visible()
     except (PWTimeoutError, PWError):
@@ -535,7 +539,7 @@ def _sleep(page: Page, range_ms: tuple[int, int]) -> None:
     page.wait_for_timeout(random.uniform(*range_ms))
 
 
-def _human_type(page: Page, locator, text: str) -> None:
+def _human_type(page: Page, locator: Locator, text: str) -> None:
     """Type `text` one character at a time with a random pause per keystroke."""
     locator.first.click(timeout=STEP_TIMEOUT_MS)
     keyboard = page.keyboard
@@ -553,7 +557,7 @@ class PasswordProvider:
     reuses a stored session -- and never sees the password form -- never asks.
     """
 
-    def __init__(self, password: str = "", prompt=None):
+    def __init__(self, password: str = "", prompt: Callable[[], str] | None = None) -> None:
         self._configured = password
         self._prompt = prompt
         self._issued = False
@@ -576,12 +580,13 @@ class PasswordProvider:
 class TotpProvider:
     """Yields TOTP codes, either derived from an otpauth URL or prompted."""
 
-    def __init__(self, totp_url: str = "", prompt=None):
+    def __init__(self, totp_url: str = "", prompt: Callable[[], str] | None = None) -> None:
         self._totp: pyotp.TOTP | None = None
         if totp_url:
             parsed = pyotp.parse_uri(totp_url)
             if not isinstance(parsed, pyotp.TOTP):
-                raise ValueError("Configured totp_url is not a TOTP otpauth:// URL.")
+                msg = "Configured totp_url is not a TOTP otpauth:// URL."
+                raise ValueError(msg)
             self._totp = parsed
         self._prompt = prompt
         self._issued = ""
@@ -590,7 +595,8 @@ class TotpProvider:
         if self._totp is not None:
             self._issued = self._totp.now()
         elif self._prompt is None:
-            raise LoginError("No TOTP URL configured and no prompt available.")
+            msg = "No TOTP URL configured and no prompt available."
+            raise LoginError(msg)
         else:
             self._issued = self._prompt()
         return self._issued

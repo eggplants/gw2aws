@@ -67,7 +67,7 @@ def _prompt(text: str, default: str = "") -> str:
     return value or default
 
 
-def _prompt_bool(text: str, default: bool) -> bool:
+def _prompt_bool(text: str, *, default: bool) -> bool:
     suffix = "Y/n" if default else "y/N"
     value = input(f"{text} [{suffix}]: ").strip().lower()
     if not value:
@@ -104,7 +104,7 @@ def cmd_configure(args: argparse.Namespace) -> int:
         session_duration = 3600
 
     print("\nSaving the Google session cookie locally lets future logins skip the login form.")
-    save_session_cookie = _prompt_bool("Save session cookie locally?", existing.save_session_cookie)
+    save_session_cookie = _prompt_bool("Save session cookie locally?", default=existing.save_session_cookie)
 
     cfg = config.ProfileConfig(
         url=url,
@@ -129,7 +129,8 @@ def cmd_configure(args: argparse.Namespace) -> int:
 def cmd_login(args: argparse.Namespace) -> int:
     cfg = config.load(args.profile)
     if not cfg.url or not cfg.email:
-        raise ValueError(f"Profile '{args.profile}' is missing url/email. Run `gw2aws configure` first.")
+        msg = f"Profile '{args.profile}' is missing url/email. Run `gw2aws configure` first."
+        raise ValueError(msg)
 
     # Any of these fields may be a 1Password `op://` reference; expand them here.
     cfg.email = resolve_secret(cfg.email)
@@ -163,7 +164,8 @@ def cmd_login(args: argparse.Namespace) -> int:
 
     roles = aws.extract_roles(saml_assertion)
     if not roles:
-        raise LoginError("No AWS roles found in the SAML assertion.")
+        msg = "No AWS roles found in the SAML assertion."
+        raise LoginError(msg)
 
     role = _resolve_role(roles, cfg.role_arn)
     print(f"Assuming role: {role.role_arn}", file=sys.stderr)
@@ -183,7 +185,8 @@ def _resolve_role(roles: list[aws.AWSRole], configured_arn: str) -> aws.AWSRole:
         for role in roles:
             if role.role_arn == configured_arn:
                 return role
-        raise LoginError(f"Configured role_arn not present in assertion: {configured_arn}")
+        msg = f"Configured role_arn not present in assertion: {configured_arn}"
+        raise LoginError(msg)
     if len(roles) == 1:
         return roles[0]
 
