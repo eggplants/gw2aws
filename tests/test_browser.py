@@ -240,7 +240,7 @@ def test_error_page_fails_the_login_instead_of_waiting_it_out():
     page = FakeRejectedPage()
 
     with pytest.raises(browser.LoginError) as exc:
-        browser._wait_visible_or_captured(cast("Any", page), FakeLocator(lambda: False), {}, 30_000)
+        browser._wait_visible_or_captured(cast("Any", page), cast("Any", FakeLocator(lambda: False)), {}, 30_000)
 
     # The recognised cause, plus what the page actually said.
     assert "--no-headless" in str(exc.value)
