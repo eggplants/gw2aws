@@ -278,8 +278,11 @@ class FakeIdentifierPage:
     the identifier input is present but `type="hidden"` and already filled in.
     """
 
-    def __init__(self, *, email_visible: bool):
+    def __init__(self, *, email_visible: bool, ignored_clicks: int = 0):
         self.email_visible = email_visible
+        # Clicks landing before the page is interactive, which Google drops.
+        self.ignored_clicks = ignored_clicks
+        self.clicks = 0
         self.clicked = False
         self.typed = ""
         self.keyboard = self
@@ -288,9 +291,9 @@ class FakeIdentifierPage:
         if selector == browser.EMAIL_INPUT_SELECTOR:
             return FakeLocator(lambda: self.email_visible)
         if selector == browser.HIDDEN_IDENTIFIER_SELECTOR:
-            return FakeLocator(lambda: False, count=0 if self.email_visible else 1)
+            return FakeLocator(lambda: False, count=0 if self.email_visible or self.clicked else 1)
         if selector == browser.IDENTIFIER_NEXT_SELECTOR:
-            return FakeLocator(lambda: True, on_click=self._click)
+            return FakeLocator(lambda: True, on_click=self._click, count=0 if self.clicked else 1)
         return FakeLocator(lambda: False, count=0)
 
     def get_by_text(self, text, exact=False):
@@ -306,7 +309,9 @@ class FakeIdentifierPage:
         pass
 
     def _click(self):
-        self.clicked = True
+        self.clicks += 1
+        if self.clicks > self.ignored_clicks:
+            self.clicked = True
 
 
 def _run_email(page, captured=None):
@@ -327,6 +332,42 @@ def test_reauth_interstitial_is_confirmed_without_retyping_the_email():
     _run_email(page)
     assert page.clicked
     assert page.typed == ""
+
+
+def test_reauth_interstitial_click_is_repeated_until_it_takes():
+    """A Next click dropped while the page loads must not be taken as confirmed."""
+    page = FakeIdentifierPage(email_visible=False, ignored_clicks=2)
+    _run_email(page)
+    assert page.clicks == 3
+    assert page.clicked
+
+
+def test_reauth_interstitial_that_never_moves_on_fails_clearly():
+    page = FakeIdentifierPage(email_visible=False, ignored_clicks=10**6)
+    with pytest.raises(browser.LoginError, match="Verify it's you"):
+        _run_email(page)
+
+
+def test_totp_steering_confirms_a_mid_flow_reauth_interstitial():
+    class ReauthThenTotpPage(FakeTotpPage):
+        def __init__(self, verdicts):
+            super().__init__(verdicts)
+            self.reauth = True
+
+        def locator(self, selector):
+            if selector in (browser.HIDDEN_IDENTIFIER_SELECTOR, browser.IDENTIFIER_NEXT_SELECTOR):
+                return FakeLocator(lambda: self.reauth, on_click=self._confirm, count=int(self.reauth))
+            if selector == self.field_selector:
+                return FakeLocator(lambda: not self.reauth and not self.solved)
+            return super().locator(selector)
+
+        def _confirm(self):
+            self.reauth = False
+
+    page = ReauthThenTotpPage(["accept"])
+    _run_totp(page, browser.TotpProvider("", prompt=lambda: "123456"))
+    assert not page.reauth
+    assert page.submitted == ["123456"]
 
 
 def test_first_page_bails_out_when_the_assertion_already_arrived():

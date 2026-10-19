@@ -60,6 +60,9 @@ EMAIL_INPUT_SELECTOR = "input#identifierId, input[name='identifier'], input[type
 # as a hidden, already-filled input: there is nothing to type, only to confirm.
 HIDDEN_IDENTIFIER_SELECTOR = "input[name='identifier'][type='hidden'], input#identifierId[type='hidden']"
 IDENTIFIER_NEXT_SELECTOR = "#identifierNext"
+# A Next click on that interstitial can land while the page is still loading
+# and be silently dropped, so it is repeated at this interval until we leave.
+REAUTH_RETRY_MS = 3_000
 
 TOTP_INPUT_SELECTOR = "input#totpPin, input[name='totpPin'], input[name='Pin']"
 
@@ -342,7 +345,51 @@ def _fill_email(page: Page, email: str, captured: dict[str, str]) -> None:
         return
     if form == "email":
         _human_type(page, page.locator(EMAIL_INPUT_SELECTOR), email)
-    _click_next(page, IDENTIFIER_NEXT_SELECTOR)
+        _click_next(page, IDENTIFIER_NEXT_SELECTOR)
+        return
+    _confirm_identity(page, captured)
+
+
+def _on_identity_confirmation(page: Page) -> bool:
+    """Whether the "Verify it's you" interstitial is the current page.
+
+    Both the hidden identifier and its Next button are required: the button
+    only exists on identifier pages, so a later page that happens to carry a
+    hidden identifier input is not mistaken for the interstitial.
+    """
+    try:
+        return (
+            page.locator(HIDDEN_IDENTIFIER_SELECTOR).count() > 0 and page.locator(IDENTIFIER_NEXT_SELECTOR).count() > 0
+        )
+    except (PWTimeoutError, PWError):
+        # Mid-navigation: whatever comes next is not the interstitial.
+        return False
+
+
+def _confirm_identity(page: Page, captured: dict[str, str]) -> None:
+    """Click through the "Verify it's you" interstitial until Google moves on.
+
+    A click that lands while the page is still loading is dropped without a
+    trace, and the login used to carry on regardless -- straight past the
+    password step and into the misleading "could not reach the TOTP challenge".
+    So the click is repeated until the interstitial is actually gone.
+    """
+    next_button = page.locator(IDENTIFIER_NEXT_SELECTOR)
+    waited = 0
+    next_click = 0
+    while waited < STEP_TIMEOUT_MS:
+        if "saml" in captured or not _on_identity_confirmation(page):
+            return
+        _raise_if_rejected(page)
+        if waited >= next_click and _is_visible(next_button):
+            _sleep(page, CLICK_DELAY_MS)
+            with contextlib.suppress(PWTimeoutError, PWError):
+                next_button.first.click(timeout=STEP_TIMEOUT_MS)
+            next_click = waited + REAUTH_RETRY_MS
+        page.wait_for_timeout(POLL_INTERVAL_MS)
+        waited += POLL_INTERVAL_MS
+    msg = "Google's 'Verify it's you' page did not move on after clicking Next."
+    raise LoginError(msg)
 
 
 def _fill_password(page: Page, password_provider: PasswordProvider, captured: dict[str, str]) -> None:
@@ -405,6 +452,11 @@ def _handle_totp(page: Page, totp_provider: TotpProvider, captured: dict[str, st
 
         nav_steps += 1
         _raise_if_rejected(page)
+
+        # Google can ask to confirm the account again mid-flow.
+        if _on_identity_confirmation(page):
+            _confirm_identity(page, captured)
+            continue
 
         # On the method chooser: pick the authenticator (TOTP) option.
         if _click_if_visible(page, AUTHENTICATOR_OPTION):
