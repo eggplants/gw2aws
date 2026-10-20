@@ -28,7 +28,7 @@ from playwright.sync_api import TimeoutError as PWTimeoutError
 from playwright.sync_api import sync_playwright
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Generator
 
     from playwright.sync_api import BrowserContext, Locator, Page, Request
 
@@ -136,7 +136,7 @@ class _TeardownNoiseFilter(logging.Filter):
 
 
 @contextlib.contextmanager
-def _quiet_playwright_teardown() -> Iterator[None]:
+def _quiet_playwright_teardown() -> Generator[None]:
     """Silence the asyncio noise emitted when a sync Playwright session stops.
 
     `PlaywrightContextManager.__exit__` cancels the driver connection's reader
