@@ -15,6 +15,21 @@ def test_is_op_reference():
     assert not secrets.is_op_reference("")
 
 
+@pytest.mark.parametrize(
+    "value",
+    ['"op://vault/item/field"', "'op://vault/item/field'", '  "op://vault/item/field"\n', '" op://vault/item/field "'],
+)
+def test_normalize_op_reference_strips_quotes(value):
+    assert secrets.normalize_op_reference(value) == "op://vault/item/field"
+    assert secrets.is_op_reference(value)
+
+
+@pytest.mark.parametrize("value", ['"quoted-password"', "'op://mismatched\"", '"', "", "plain"])
+def test_normalize_op_reference_leaves_non_references_alone(value):
+    assert secrets.normalize_op_reference(value) == value
+    assert not secrets.is_op_reference(value)
+
+
 def test_resolve_secret_passthrough_for_plain_value():
     assert secrets.resolve_secret("plain-value") == "plain-value"
     assert secrets.resolve_secret("") == ""
@@ -34,6 +49,20 @@ def test_resolve_secret_runs_op_read(monkeypatch):
     monkeypatch.setattr(secrets.subprocess, "run", fake_run)
 
     assert secrets.resolve_secret("op://vault/item/field") == "s3cr3t"
+    assert called["cmd"] == ["op", "read", "op://vault/item/field"]
+
+
+def test_resolve_secret_accepts_quoted_reference(monkeypatch):
+    called = {}
+
+    def fake_run(cmd, **kwargs):
+        called["cmd"] = cmd
+        return subprocess.CompletedProcess(cmd, 0, stdout="s3cr3t\n", stderr="")
+
+    monkeypatch.setattr(secrets.shutil, "which", lambda _name: "/usr/bin/op")
+    monkeypatch.setattr(secrets.subprocess, "run", fake_run)
+
+    assert secrets.resolve_secret('"op://vault/item/field"') == "s3cr3t"
     assert called["cmd"] == ["op", "read", "op://vault/item/field"]
 
 

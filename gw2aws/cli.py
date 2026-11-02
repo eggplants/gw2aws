@@ -14,7 +14,7 @@ from gw2aws.browser import (
     fetch_saml_response,
     is_chromium_installed,
 )
-from gw2aws.secrets import resolve_secret
+from gw2aws.secrets import normalize_op_reference, resolve_secret
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -106,11 +106,12 @@ def cmd_configure(args: argparse.Namespace) -> int:
     print("\nSaving the Google session cookie locally lets future logins skip the login form.")
     save_session_cookie = _prompt_bool("Save session cookie locally?", default=existing.save_session_cookie)
 
+    # Store `"op://..."` (as copied from 1Password desktop) as the bare reference.
     cfg = config.ProfileConfig(
         url=url,
-        email=email,
-        password=password,
-        totp_url=totp_url,
+        email=normalize_op_reference(email),
+        password=normalize_op_reference(password),
+        totp_url=normalize_op_reference(totp_url),
         region=region,
         role_arn=role_arn,
         session_duration=session_duration,

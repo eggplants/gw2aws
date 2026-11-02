@@ -45,6 +45,30 @@ def test_main_reports_missing_profile(capsys, tmp_path, monkeypatch):
     assert "error:" in capsys.readouterr().err
 
 
+def test_configure_stores_quoted_op_references_bare(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "CONFIG_DIR", tmp_path)
+    answers = iter(
+        [
+            "https://accounts.google.com/o/saml2/initsso?idpid=x",  # url
+            '"op://vault/item/username"',  # email
+            '"op://vault/item/one-time password?attribute=otp"',  # totp_url
+            "",  # region
+            "",  # role_arn
+            "",  # session_duration
+            "n",  # save_session_cookie
+        ]
+    )
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    monkeypatch.setattr(cli.getpass, "getpass", lambda _: '"op://vault/item/password"')
+
+    assert cli.main(["configure", "--profile", "p"]) == 0
+
+    cfg = config.load("p")
+    assert cfg.email == "op://vault/item/username"
+    assert cfg.password == "op://vault/item/password"
+    assert cfg.totp_url == "op://vault/item/one-time password?attribute=otp"
+
+
 @pytest.mark.parametrize("flag", ["-V", "--version"])
 def test_version_flag_prints_version_and_exits(capsys, flag):
     with pytest.raises(SystemExit) as excinfo:

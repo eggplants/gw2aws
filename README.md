@@ -94,7 +94,8 @@ aws --profile myprofile sts get-caller-identity
 (`op://vault/item/field`) instead of the raw value. At login time they are
 resolved via `op read`, so nothing secret is stored in the profile JSON. This
 requires the [1Password CLI](https://developer.1password.com/docs/cli/) to be
-installed and signed in.
+installed and signed in. A quoted reference (`"op://vault/item/field"`), as
+copied by 1Password desktop's "Copy Secret Reference", is accepted as-is.
 
 ## References
 
