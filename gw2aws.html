@@ -196,7 +196,8 @@ aws<span class="w"> </span>--profile<span class="w"> </span>myprofile<span class
 (<code>op://vault/item/field</code>) instead of the raw value. At login time they are
 resolved via <code>op read</code>, so nothing secret is stored in the profile JSON. This
 requires the <a href="https://developer.1password.com/docs/cli/">1Password CLI</a> to be
-installed and signed in.</p>
+installed and signed in. A quoted reference (<code>"op://vault/item/field"</code>), as
+copied by 1Password desktop's "Copy Secret Reference", is accepted as-is.</p>
 
 <h2 id="references">References</h2>
 
